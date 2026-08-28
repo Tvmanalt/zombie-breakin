@@ -1,0 +1,6 @@
+{
+  "appId": "com.zombiebreakin.game",
+  "appName": "Zombie BreakIn",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

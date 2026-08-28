@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Zombie BreakIn — 3D</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050608;color:#fff;font-family:Arial,Helvetica,sans-serif}
+body{touch-action:none}#game{position:fixed;inset:0}canvas{display:block}
+#menu,#pause,#hud,#dialog,#crosshair,#toast,#mobile{position:fixed;z-index:5}
+#menu{inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 45%,rgba(35,45,52,.4),#030405 70%);overflow:hidden}
+.menuBg{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.8),rgba(0,0,0,.25)),repeating-linear-gradient(90deg,transparent 0 70px,rgba(255,255,255,.025) 71px 72px);animation:drift 14s linear infinite}
+@keyframes drift{to{background-position:500px 0}}
+.card{position:relative;width:min(560px,90vw);padding:42px 48px;border:1px solid #59646b;background:rgba(8,11,14,.92);box-shadow:0 25px 90px #000,0 0 0 1px rgba(255,255,255,.04) inset}
+.logo{font-size:clamp(42px,7vw,76px);font-weight:900;letter-spacing:.06em;line-height:.9;margin:0;text-shadow:0 4px 0 #000,0 0 30px rgba(150,30,30,.45)}
+.logo span{display:block;color:#c43b3b}.subtitle{color:#aeb7bd;margin:16px 0 30px;letter-spacing:.12em;text-transform:uppercase;font-size:12px}
+.btn{display:block;width:100%;padding:14px 16px;margin:9px 0;background:#141a1f;border:1px solid #4b575e;color:#f2f4f5;text-align:left;font-weight:700;letter-spacing:.08em;cursor:pointer}
+.btn:hover{background:#242e35;border-color:#a4afb6}.btn.primary{background:#6f2225;border-color:#a94b4f}.btn.primary:hover{background:#8d2a2e}
+.small{font-size:11px;color:#818c93;line-height:1.6}.version{position:absolute;bottom:12px;right:16px;color:#555;font-size:10px}
+#hud{inset:0;pointer-events:none;display:none}.top{position:absolute;top:18px;left:18px;width:290px;background:rgba(4,7,9,.72);border:1px solid #39434a;padding:12px}.objective{font-size:12px;color:#d9c27b;margin-bottom:9px}.bar{height:7px;background:#20262a;margin:5px 0 9px}.fill{height:100%}.hp{background:#b83c40}.stam{background:#789a73}.hudBottom{position:absolute;left:18px;bottom:18px;background:rgba(4,7,9,.72);border:1px solid #39434a;padding:10px 14px;font-size:12px}.weapon{color:#e2d18a;font-weight:bold}
+#crosshair{display:none;left:50%;top:50%;width:16px;height:16px;transform:translate(-50%,-50%);pointer-events:none}.cross{position:absolute;background:#fff;opacity:.8}.cx{left:7px;top:0;width:2px;height:16px}.cy{left:0;top:7px;width:16px;height:2px}
+#dialog{display:none;left:50%;bottom:28px;transform:translateX(-50%);width:min(820px,90vw);background:rgba(5,7,9,.96);border:1px solid #707b82;padding:18px 20px;box-shadow:0 15px 45px #000}.speaker{color:#e0c36e;font-weight:800;font-size:12px;letter-spacing:.12em;margin-bottom:8px}.dialogText{font-size:16px;line-height:1.5}.continue{color:#727d84;font-size:10px;margin-top:12px}
+#pause{display:none;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,.78)}#pause .card{width:420px}
+#toast{display:none;left:50%;top:76%;transform:translate(-50%,-50%);padding:10px 16px;background:#10161a;border:1px solid #68747b;font-size:12px}
+#mobile{display:none;inset:0;pointer-events:none}.stick{position:absolute;bottom:30px;width:120px;height:120px;border-radius:50%;border:1px solid #ffffff30;background:#ffffff08;pointer-events:auto}.stick.left{left:24px}.stick.right{right:24px}.stick i{position:absolute;width:46px;height:46px;border-radius:50%;background:#ffffff18;left:37px;top:37px}.mattack{position:absolute;right:164px;bottom:42px;width:64px;height:64px;border-radius:50%;background:#8d3035aa;border:1px solid #d4777a;color:#fff;pointer-events:auto;font-weight:bold}
+@media(max-width:700px){.card{padding:30px}.top{width:240px}.hudBottom{bottom:10px}.subtitle{margin-bottom:18px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="menu"><div class="menuBg"></div><div class="card">
+<h1 class="logo">ZOMBIE<span>BREAKIN</span></h1>
+<div class="subtitle">WESTBROOK HIGH // NIGHTFALL INCIDENT 01</div>
+<button class="btn primary" id="new">NEW GAME</button>
+<button class="btn" id="continue">CONTINUE</button>
+<button class="btn" id="settings">SETTINGS</button>
+<button class="btn" id="credits">CREDITS</button>
+<p class="small">A 3D browser survival-horror game. WASD move · Mouse look · Shift sprint · E interact · Space attack · I inventory · Esc pause.</p>
+<div class="version">BUILD 0.2 // NIGHTFALL</div>
+</div></div>
+
+<div id="hud"><div class="top"><div class="objective" id="objective">OBJECTIVE: Find Maya.</div><div>HP</div><div class="bar"><div class="fill hp" id="hp"></div></div><div>STAMINA</div><div class="bar"><div class="fill stam" id="stam"></div></div></div><div class="hudBottom"><span class="weapon" id="weapon">BASEBALL BAT</span> &nbsp; | &nbsp; BATTERIES <span id="batt">2</span> &nbsp; | &nbsp; LORE <span id="loreCount">0</span></div></div>
+<div id="crosshair"><i class="cross cx"></i><i class="cross cy"></i></div>
+<div id="dialog"><div class="speaker" id="speaker"></div><div class="dialogText" id="dialogText"></div><div class="continue">E / SPACE — CONTINUE</div></div>
+<div id="toast"></div>
+<div id="pause"><div class="card"><h2>PAUSED</h2><button class="btn primary" id="resume">RESUME</button><button class="btn" id="save">SAVE GAME</button><button class="btn" id="title">TITLE SCREEN</button></div></div>
+<div id="mobile"><div class="stick left"><i></i></div><div class="stick right"><i></i></div><button class="mattack">ATTACK</button></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+const SAVE='zombieBreakIn3DSave';
+let scene,camera,renderer,controls,clock;
+let player,velocity=new THREE.Vector3(),yawTarget=0;
+let walls=[],zombies=[],npcs=[],pickups=[],blood=[];
+let dialogue=null,paused=false,started=false,attackCD=0,flash=0,shake=0;
+const keys={};
+const state={chapter:1,hp:100,stamina:100,batteries:2,lore:[],flags:{power:false,basement:false,truth:false,jordan:false,all:false},ending:null};
+
+const el=id=>document.getElementById(id);
+function toast(s){el('toast').textContent=s;el('toast').style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>el('toast').style.display='none',1800)}
+function save(){localStorage.setItem(SAVE,JSON.stringify(state));toast('GAME SAVED')}
+function load(){try{Object.assign(state,JSON.parse(localStorage.getItem(SAVE)||'{}'));state.flags=Object.assign({power:false,basement:false,truth:false,jordan:false,all:false},state.flags||{});state.lore=state.lore||[];return true}catch(e){return false}}
+function mat(c,rough=1,metal=0){return new THREE.MeshStandardMaterial({color:c,roughness:rough,metalness:metal})}
+function box(x,y,z,w,h,d,c){let m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));m.position.set(x,y,z);scene.add(m);return m}
+function label(text,x,y,z){let cv=document.createElement('canvas'),g=cv.getContext('2d');cv.width=512;cv.height=96;g.fillStyle='rgba(0,0,0,.7)';g.fillRect(0,0,512,96);g.fillStyle='#eee';g.font='bold 32px Arial';g.fillText(text,18,58);let t=new THREE.CanvasTexture(cv),s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.scale.set(4,0.75,1);s.position.set(x,y,z);scene.add(s)}
+function init(){
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x080b0e);scene.fog=new THREE.FogExp2(0x080b0e,.025);
+ camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,1000);camera.position.set(0,1.7,12);
+ renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'low-power'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;el('game').appendChild(renderer.domElement);
+ controls=new PointerLockControls(camera,renderer.domElement);scene.add(camera);
+ clock=new THREE.Clock();
+ buildSchool(); addLights(); bind();
+ requestAnimationFrame(loop);
+}
+function buildSchool(){
+ // floor
+ box(0,-.15,0,48,.3,34,0x252a2c);
+ // tiled floor
+ for(let x=-24;x<=24;x+=2)for(let z=-16;z<=16;z+=2){let q=new THREE.Mesh(new THREE.BoxGeometry(1.95,.02,1.95),mat(((x+z)%4===0)?0x303537:0x292e30));q.position.set(x,.02,z);scene.add(q)}
+ // outer shell + interior walls, creating a connected school
+ const addWall=(x,z,w,d)=>{let m=box(x,1.5,z,w,3,d,0x171c20);walls.push({x,z,w,d});return m}
+ addWall(0,-17,48,1);addWall(-24,0,1,34);addWall(24,0,1,34);
+ addWall(-8,-8,1,18);addWall(8,-8,1,18);addWall(-8,8,1,18);addWall(8,8,1,18);
+ addWall(-16,0,16,1);addWall(16,0,16,1);
+ // doorway gaps visually with halls
+ box(0,1.5,-17,8,3,1,0x171c20);
+ // rooms
+ const rooms=[[-16,-12,'ROOM 204'],[16,-12,'SCIENCE LAB'],[-16,12,'LIBRARY'],[16,12,'CAFETERIA']];
+ for(const [x,z,n] of rooms){box(x,1.5,z,12,3,.35,0x1a2024);label(n,x,2.8,z+.4)}
+ // desks
+ for(let x=-20;x<-11;x+=3)for(let z=-14;z<-9;z+=2.4){box(x,.5,z,1.6,.9,.8,0x5b4638);box(x,.95,z,1.7,.12,.85,0x8a6a4e)}
+ // lab tables
+ for(let x=11;x<21;x+=3)box(x,.55,-12,1.8,1,4,0x465057)
+ // lockers
+ for(let x=-21;x<=21;x+=1.5)box(x,1.25,15.8,1.25,2.5,.25,0x3d4850)
+ // cafeteria tables
+ for(let x=12;x<22;x+=4)for(let z=9;z<15;z+=3)box(x,.45,z,2.6,.8,1.1,0x514b42);
+ // basement hatch
+ box(18,.08,4.5,3,.08,2,0x121619);label('B1',18,2.5,4.5);
+ // exit
+ box(0,1.5,-16.8,7,2.8,.4,0x34383a);label('MAIN EXIT',0,3,-16.3);
+}
+function addLights(){
+ scene.add(new THREE.HemisphereLight(0x6c7a86,0x11100e,.5));
+ const points=[[-16,2,-12,0x91a7b5,2.2],[16,2,-12,0x8fa9b9,2.5],[-16,2,12,0x8b9bad,2.1],[16,2,12,0xa9a078,2.4],[0,2,0,0x6d7b82,1.5]];
+ for(const [x,y,z,c,i] of points){let l=new THREE.PointLight(c,i,12);l.position.set(x,y,z);l.castShadow=true;scene.add(l)}
+}
+function character(x,z,color,name){
+ let g=new THREE.Group();let body=new THREE.Mesh(new THREE.BoxGeometry(.75,1.05,.48),mat(color));body.position.y=.7;g.add(body);
+ let head=new THREE.Mesh(new THREE.BoxGeometry(.58,.58,.55),mat(0xc48d68));head.position.y=1.5;g.add(head);
+ let leg1=box(.0,0,0,.18,.6,.2,0x20252a); // detached helper not group
+ scene.add(g);g.position.set(x,0,z);label(name,x,2.4,z);return g
+}
+function spawnNPCs(){
+ npcs.push({id:'maya',name:'MAYA TORRES',x:-4,z:-.5,g:character(-4,-.5,0xb65f65,'MAYA')});
+ npcs.push({id:'jordan',name:'JORDAN REED',x:5,z:0,g:character(5,0,0x536d9a,'JORDAN')});
+ npcs.push({id:'wilson',name:'MR. WILSON',x:16,z:-12,g:character(16,-12,0x9b8661,'WILSON')});
+ npcs.push({id:'frank',name:'FRANK',x:18,z:12,g:character(18,12,0x796353,'FRANK')});
+}
+function zombie(x,z,type='basic'){
+ let g=new THREE.Group();let body=new THREE.Mesh(new THREE.BoxGeometry(.7,1.15,.5),mat(type==='brute'?0x514249:0x526653));body.position.y=.72;g.add(body);
+ let head=new THREE.Mesh(new THREE.BoxGeometry(.6,.6,.55),mat(0x6b8269));head.position.y=1.52;g.add(head);
+ let eye=mat(0xb62c30);for(let dx of [-.13,.13]){let e=new THREE.Mesh(new THREE.BoxGeometry(.07,.07,.02),eye);e.position.set(dx,1.56,-.29);g.add(e)}
+ scene.add(g);g.position.set(x,0,z);
+ let z={x,z,g,type,hp:type==='brute'?90:50,speed:type==='runner'?2.5:type==='brute'?0.7:1.15,atk:0};zombies.push(z);return z
+}
+function buildEntities(){
+ spawnNPCs();zombie(-2,4);zombie(2,5,'runner');zombie(12,3);zombie(-12,7,'runner');zombie(20,-5,'brute');
+ pickup(-18,-11,'MED KIT','heal');pickup(14,-10,'BATTERY','battery');pickup(-18,11,'OLD KEY','key');pickup(20,11,'NIGHTFALL FILE','lore');pickup(2,-13,'STRANGE NOTE','lore')
+}
+function pickup(x,z,name,type){let m=box(x,.35,z,.35,.7,.35,type==='lore'?0xc1a34d:0x5d9aa0);m.userData={x,z,name,type,taken:false};pickups.push(m)}
+function resetWorld(){for(const z of zombies)scene.remove(z.g);for(const n of npcs)scene.remove(n.g);for(const p of pickups)scene.remove(p);zombies=[];npcs=[];pickups=[];buildEntities()}
+function bind(){
+ addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+ addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Escape'){if(dialogue){advance();return}togglePause()}if(e.code==='KeyI')toast('Inventory: Bat · Flashlight · '+state.batteries+' batteries');if(e.code==='KeyE'){if(dialogue)advance();else interact()}if(e.code==='Space'){e.preventDefault();if(dialogue)advance();else attack()}});
+ addEventListener('keyup',e=>keys[e.code]=false);
+ el('new').onclick=()=>startNew();el('continue').onclick=()=>{if(load())startGame(true);else toast('NO SAVE FOUND')};
+ el('settings').onclick=()=>alert('SETTINGS\\n\\nVolume: browser volume\\nScreen shake: enabled\\nReduced flashing: recommended if sensitive\\nGraphics: low-power WebGL mode');
+ el('credits').onclick=()=>alert('ZOMBIE BREAKIN 3D\\n\\nA student-made survival-horror concept.\\nBuilt with HTML, CSS, JavaScript and Three.js.\\nProject Nightfall is watching.');
+ el('resume').onclick=togglePause;el('save').onclick=save;el('title').onclick=()=>location.reload();
+ renderer.domElement.addEventListener('click',()=>{if(started&&!paused&&!dialogue)controls.lock()});
+}
+function startNew(){Object.assign(state,{chapter:1,hp:100,stamina:100,batteries:2,lore:[],ending:null,flags:{power:false,basement:false,truth:false,jordan:false,all:false}});startGame(false)}
+function startGame(){el('menu').style.display='none';el('hud').style.display='block';el('crosshair').style.display='block';started=true;resetWorld();camera.position.set(0,1.7,10);setObjective();say('MAYA','Alex! Tell me you heard that too.')}
+function setObjective(){let s=state.chapter===1?'Find Maya in the main hall.':state.chapter===2?'Restore power in the Science Lab.':state.chapter===3?'Find the hidden basement entrance.':state.chapter===4?'Decide who to trust.':'Reach the main exit.';el('objective').textContent='OBJECTIVE: '+s}
+function say(s,t){dialogue={s,t};el('speaker').textContent=s;el('dialogText').textContent=t;el('dialog').style.display='block'}
+function advance(){if(!dialogue)return;let s=dialogue.s;dialogue=null;el('dialog').style.display='none';
+ if(s==='MAYA'&&state.chapter===1){state.chapter=2;say('ALEX','Something is wrong with the school.');setObjective()}
+ else if(s==='ALEX'&&state.chapter===2){toast('THE LOCKDOWN HAS STARTED');setObjective()}
+ else if(s==='SYSTEM'){}
+}
+function interact(){
+ let p=camera.position;
+ let best=null,bd=2.2;
+ for(const n of npcs){let d=Math.hypot(p.x-n.x,p.z-n.z);if(d<bd){bd=d;best=n}}
+ if(best){talk(best);return}
+ for(const q of pickups)if(!q.userData.taken&&Math.hypot(p.x-q.userData.x,p.z-q.userData.z)<1.8){collect(q);return}
+ if(Math.hypot(p.x-18,p.z-4.5)<3){if(state.chapter<3){toast('THE HATCH IS SEALED');}else{state.flags.basement=true;state.chapter=4;state.flags.truth=true;state.lore.push('Basement Records');say('ALEX','This was never a school lab. It was a test site.');setObjective();}}
+ if(Math.abs(p.x)<4&&p.z<-14){ending('ESCAPE')}
+ if(Math.hypot(p.x-16,p.z+12)<3&&state.chapter===2){state.flags.power=true;state.chapter=3;state.lore.push('Power Log');say('MR. WILSON','The generator was wired to the lab. That was not school equipment.');setObjective()}
+}
+function talk(n){
+ if(n.id==='maya')say('MAYA','I am officially voting against splitting up. I would also like to vote against dying.');
+ if(n.id==='jordan'){if(!state.flags.jordan){state.flags.jordan=true;say('JORDAN','Nightfall was running before today. Someone expected an outbreak.')}else say('JORDAN','The cameras were watching students, not protecting them.')}
+ if(n.id==='wilson'){state.lore.push('Wilson Confession');say('MR. WILSON','I signed the research paperwork. I thought it was harmless. I was wrong.')}
+ if(n.id==='frank')say('FRANK','There is a maintenance tunnel under the storage cage. If you find it, do not trust the lights.')}
+function collect(q){q.userData.taken=true;q.visible=false;let u=q.userData;if(u.type==='heal'){state.hp=Math.min(100,state.hp+35);toast('MED KIT +35 HP')}if(u.type==='battery'){state.batteries++;toast('BATTERY FOUND')}if(u.type==='key')toast('OLD KEY FOUND');if(u.type==='lore'){state.lore.push(u.name);toast('LORE: '+u.name);if(state.lore.length>=5)state.flags.all=true}updateHud();save()}
+function attack(){
+ if(attackCD>0||dialogue||paused)return;attackCD=.48;shake=.08;
+ const dir=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);dir.y=0;dir.normalize();
+ let best=null,score=99;
+ for(const z of zombies){let v=new THREE.Vector3(z.x-camera.position.x,0,z.z-camera.position.z),d=v.length();if(d<3){let dot=dir.dot(v.normalize());if(dot>.25&&d<score){score=d;best=z}}}
+ if(best){best.hp-=35;toast('HIT');if(best.hp<=0){scene.remove(best.g);zombies.splice(zombies.indexOf(best),1)}}
+}
+function ending(type){state.ending=type;save();el('menu').style.display='flex';el('hud').style.display='none';el('crosshair').style.display='none';started=false;document.querySelector('#menu .card').innerHTML=`<h1 class="logo">ENDING<span>${type==='ESCAPE'?'ESCAPE':'NIGHTFALL'}</span></h1><p>${type==='ESCAPE'?'Alex makes it outside. The school burns behind them. The truth remains buried.':'The files contain Alex\\'s name from weeks before the outbreak. SUBJECT A-16: ACTIVE. The experiment was never about zombies. It was about Alex.'}</p><button class="btn primary" onclick="location.reload()">TITLE SCREEN</button>`}
+function togglePause(){if(!started)return;paused=!paused;el('pause').style.display=paused?'flex':'none';if(paused)controls.unlock()}
+function move(dt){
+ if(dialogue||paused)return;
+ let f=0,s=0;if(keys.KeyW)f++;if(keys.KeyS)f--;if(keys.KeyA)s++;if(keys.KeyD)s--;let v=new THREE.Vector3(s,0,f);if(v.length()){v.normalize();let speed=keys.ShiftLeft||keys.ShiftRight?5.4:3.2;if(keys.ShiftLeft||keys.ShiftRight)state.stamina=Math.max(0,state.stamina-30*dt);camera.translateX(v.x*speed*dt);camera.translateZ(-v.z*speed*dt)}else state.stamina=Math.min(100,state.stamina+22*dt);
+ camera.position.x=THREE.MathUtils.clamp(camera.position.x,-22.5,22.5);camera.position.z=THREE.MathUtils.clamp(camera.position.z,-15.8,15.8);camera.position.y=1.7;
+ // basic wall collision
+ for(const w of walls){let px=camera.position.x,pz=camera.position.z;if(Math.abs(px-w.x)<w.w/2+.35&&Math.abs(pz-w.z)<w.d/2+.35){if(Math.abs(px-w.x)/(w.w/2+.35)>Math.abs(pz-w.z)/(w.d/2+.35))camera.position.x+=(px>w.x?.12:-.12);else camera.position.z+=(pz>w.z?.12:-.12)}}}
+function updateZombies(dt){
+ for(const z of zombies){z.atk-=dt;let dx=camera.position.x-z.x,dz=camera.position.z-z.z,d=Math.hypot(dx,dz);if(d<14){z.g.position.x+=dx/d*z.speed*dt;z.g.position.z+=dz/d*z.speed*dt;z.g.lookAt(camera.position.x,.8,camera.position.z)}if(d<1.15&&z.atk<=0){state.hp=Math.max(0,state.hp- (z.type==='brute'?18:8));z.atk=1;flash=.15;if(state.hp<=0){toast('YOU DIED — RESTARTING');setTimeout(()=>startNew(),900)}}}}
+function updateHud(){el('hp').style.width=state.hp+'%';el('stam').style.width=state.stamina+'%';el('batt').textContent=state.batteries;el('loreCount').textContent=state.lore.length}
+function loop(){requestAnimationFrame(loop);let dt=Math.min(clock.getDelta(),.05);move(dt);updateZombies(dt);attackCD=Math.max(0,attackCD-dt);if(flash>0)flash-=dt;updateHud();renderer.render(scene,camera)}
+init();updateHud();
+</script>
+</body>
+</html>
